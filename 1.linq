@@ -1,10 +1,9 @@
 <Query Kind="Program">
   <NuGetReference>System.Reactive</NuGetReference>
-  <Namespace>System</Namespace>
   <Namespace>System.Collections.Specialized</Namespace>
   <Namespace>System.ComponentModel</Namespace>
-  <Namespace>System.Diagnostics</Namespace>
-  <Namespace>System.IO</Namespace>
+  <Namespace>System.Drawing</Namespace>
+  <Namespace>System.Drawing.Imaging</Namespace>
   <Namespace>System.IO.Packaging</Namespace>
   <Namespace>System.Reactive</Namespace>
   <Namespace>System.Reactive.Concurrency</Namespace>
@@ -30,61 +29,113 @@
   <Namespace>System.Windows.Forms.Layout</Namespace>
   <Namespace>System.Windows.Forms.PropertyGridInternal</Namespace>
   <Namespace>System.Windows.Forms.VisualStyles</Namespace>
-  <Namespace>System.Windows.Input</Namespace>
   <Namespace>System.Windows.Interop</Namespace>
   <Namespace>System.Windows.Markup</Namespace>
   <Namespace>System.Windows.Markup.Primitives</Namespace>
-  <Namespace>System.Windows.Media</Namespace>
   <Namespace>System.Windows.Media.Converters</Namespace>
   <Namespace>System.Windows.Threading</Namespace>
-  <Namespace>System.Drawing</Namespace>
-  <Namespace>System.Drawing.Imaging</Namespace>
 </Query>
 
 void Main()
 {
 	var form = new Form();
+	form.WindowState = FormWindowState.Maximized;
 
-	var control = new PictureBox();
+	control = new PictureBox();
 	control.Width = 1000;
 	control.Height = 1000;
 	control.Dock = DockStyle.Top | DockStyle.Left;
-	control.Image = new Bitmap(1000, 1000, PixelFormat.Format24bppRgb);
+	
+    ClearControl();
 
+	var groupBox = new FlowLayoutPanel();
+	groupBox.Name = "Buttons";
+	groupBox.Dock = DockStyle.Top | DockStyle.Right;
+
+	var buttonOhne = new Button();
+	buttonOhne.Text = "Ohne";
+	groupBox.Controls.Add(buttonOhne);
+
+	var buttonKurz = new Button();
+	buttonKurz.Text = "Kurz";
+	groupBox.Controls.Add(buttonKurz);
+
+	var buttonLange = new Button();
+	buttonLange.Text = "Lange";
+	groupBox.Controls.Add(buttonLange);
+
+	var buttonOff = new Button();
+	buttonOff.Text = "Aus";
+	groupBox.Controls.Add(buttonOff);
+
+	var buttonClear = new Button();
+	buttonClear.Text = "Clear";
+	groupBox.Controls.Add(buttonClear);
+
+	form.Controls.Add(groupBox);
+	var observer = Observable.FromEventPattern<MouseEventHandler, MouseEventArgs>(
+						handler => control.MouseMove += handler,
+						handler => control.MouseMove -= handler);
+
+	buttonOhne.Click += (sender, args) => CreateSubscription(observer, 0);
+	buttonKurz.Click += (sender, args) => CreateSubscription(observer, .05);
+	buttonLange.Click += (sender, args) => CreateSubscription(observer, 1);
+	buttonOff.Click += (sender, args) => subscription?.Dispose();
+	buttonClear.Click += (sender, args) => ClearControl();
+
+	form.Controls.Add(control);
+	form.ShowDialog();
+}
+
+void ClearControl()
+{
+	control.Image = new Bitmap(1000, 1000, PixelFormat.Format24bppRgb);
 	using (var gra = Graphics.FromImage(control.Image))
 	{
 		gra.FillRectangle(Brushes.White, 0, 0, control.Image.Width, control.Image.Height);
 	};
+}
 
-	var startX = int.MaxValue;
-	var startY = int.MinValue;
-	var pen = new Pen(Color.Black, 2);
+void CreateSubscription(IObservable<EventPattern<MouseEventArgs>> observer, double delay)
+{
+	subscription?.Dispose();
+	subscription = observer.Delay(TimeSpan.FromSeconds(delay)).Subscribe(o => control.Invoke((MethodInvoker)(() => DrawLine(o))));
+}
 
-	control.MouseMove += (sender, args) =>
+
+IDisposable subscription;
+PictureBox control;
+int startX = int.MaxValue;
+int startY = int.MinValue;
+Pen pen = new Pen(Color.Black, 2);
+
+
+object @lock = new object();
+
+void DrawLine(EventPattern<MouseEventArgs> o)
+{
+	var args = o.EventArgs;
+	lock (@lock)
 	{
-		using (var gra = Graphics.FromImage(control.Image))
+		if (args.Button != MouseButtons.Left)
 		{
-			if (args.Button != MouseButtons.Left)
-			{
-				startX = int.MaxValue;
-				startY = int.MinValue;
-				return;
-			}
+			startX = int.MaxValue;
+			startY = int.MinValue;
+			return;
+		}
 
-			if (startX != int.MaxValue)
+		if (startX != int.MaxValue)
+		{
+			using (var gra = Graphics.FromImage(control.Image))
 			{
 				gra.DrawLine(pen, startX, startY, args.X, args.Y);
 			}
-			startX = args.X;
-			startY = args.Y;
+			control.Invalidate();
 		}
 
-		control.Invalidate();
-	};
-
-
-	form.Controls.Add(control);
-	form.ShowDialog();
+		startX = args.X;
+		startY = args.Y;
+	}
 }
 
 // Define other methods and classes here
