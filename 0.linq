@@ -41,7 +41,9 @@
 
 void Main()
 {
-	Observable.Range(0, 10).Timestamp().SubscribeConsole("Hallo");
+	var a = Observable.Range(0, 10).Timestamp();
+	
+	a.SubscribeConsole("A");
 }
 
 // Define other methods and classes here

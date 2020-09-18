@@ -36,38 +36,18 @@
   <Namespace>System.Windows.Threading</Namespace>
 </Query>
 
+#load ".\extensions"
+
+
 void Main()
 {
+	var source = new[] {1,2,3}.ToObservable().Repeat(2);
 
+	source.Skip(3).SubscribeConsole("A");
+	
+	Task.Delay(4000).GetAwaiter().GetResult();
+	
+	source.SubscribeConsole("B");
 }
 
-public class ConsoleObserver<T> : IObserver<T>
-{
-	private readonly string _name;
-	public ConsoleObserver(string name = "")
-	{
-		_name = name;
-	}
-	public void OnNext(T value)
-	{
-		Console.WriteLine("{0} - OnNext({1})", _name, value);
-	}
-	public void OnError(Exception error)
-	{
-		Console.WriteLine("{0} - OnError:", _name);
-		Console.WriteLine("\t {0}", error);
-	}
-	public void OnCompleted()
-	{
-		Console.WriteLine("{0} - OnCompleted()", _name);
-	}
-}
-
-// Define other methods, classes and namespaces here
-public static class Extensions
-{
-	public static IDisposable SubscribeConsole<T>(this IObservable<T> observable, string name = "")
-	{
-		return observable.Subscribe(new ConsoleObserver<T>(name));
-	}
-}
+// Define other methods and classes here
