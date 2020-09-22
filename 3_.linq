@@ -16,6 +16,12 @@
   <Namespace>System.Windows.Shapes</Namespace>
 </Query>
 
+private class MoveOrDown
+{
+	public MouseButtonEventArgs Down;
+	public MouseEventArgs Move;
+}
+
 void Main()
 {
 	var window = new Window();
@@ -29,26 +35,34 @@ void Main()
 
 	window.Show();
 
-	var mouseDowns = Observable.FromEventPattern<MouseButtonEventHandler, MouseButtonEventArgs>(handler => canvas.MouseDown += handler, handler => canvas.MouseDown -= handler);
+	var mouseDowns = Observable.FromEventPattern<MouseButtonEventHandler, MouseButtonEventArgs>(handler => canvas.MouseDown += handler, handler => canvas.MouseDown -= handler)
+							   .Select(handler => new MoveOrDown { Down = handler.EventArgs });
 	var mouseUp = Observable.FromEventPattern<MouseButtonEventHandler, MouseButtonEventArgs>(handler => canvas.MouseUp += handler, handler => canvas.MouseUp -= handler);
-	var movements = Observable.FromEventPattern<MouseEventHandler, MouseEventArgs>(handler => canvas.MouseMove += handler, handler => canvas.MouseMove -= handler);
+	var movements = Observable.FromEventPattern<MouseEventHandler, MouseEventArgs>(handler => canvas.MouseMove += handler, handler => canvas.MouseMove -= handler)
+								.Select(handler => new MoveOrDown { Move = handler.EventArgs });
 
-	Polyline line = null;
+	
 
-	movements.
-	.SkipUntil(
-			mouseDowns.Do(_ =>
-								{
-									line = new Polyline() { Stroke = Brushes.Black, StrokeThickness = 3 };
-									canvas.Children.Add(line);
-								}
-						)
-			)
+	movements
+	.SkipUntil(mouseDowns)
 	.TakeUntil(mouseUp)
-	.Select(m => m.EventArgs.GetPosition(canvas))
+	//.Select(m => m.Move.GetPosition(canvas))
+	.Merge(mouseDowns)
 	.Repeat()
-	.Delay(TimeSpan.FromMilliseconds(1000))
-	.Subscribe(pos => canvas.Dispatcher.Invoke((() => line.Points.Add(pos))));
+	.Delay(TimeSpan.FromMilliseconds(10))
+	.Subscribe(pos => canvas.Dispatcher.Invoke((() =>
+		{
+			if (pos.Down != null)
+			{
+				var line = new Polyline() { Stroke = Brushes.Black, StrokeThickness = 3 };
+				canvas.Children.Add(line);
+			}
+			else
+			{
+				var line = (Polyline)canvas.Children.Cast<UIElement>().Last();
+				line.Points.Add(pos.Move.GetPosition(canvas));
+			}
+		})));
 }
 
 // Define other methods, classes and namespaces here
