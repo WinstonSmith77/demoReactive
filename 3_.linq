@@ -47,9 +47,10 @@ void Main()
 	.SkipUntil(mouseDowns)
 	.TakeUntil(mouseUp)
 	//.Select(m => m.Move.GetPosition(canvas))
-	.Merge(mouseDowns)
 	.Repeat()
-	.Delay(TimeSpan.FromMilliseconds(10))
+	.Merge(mouseDowns)
+	
+	//.Delay(TimeSpan.FromMilliseconds(10))
 	.Subscribe(pos => canvas.Dispatcher.Invoke((() =>
 		{
 			if (pos.Down != null)
