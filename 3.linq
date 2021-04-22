@@ -35,8 +35,7 @@ void Main()
 
 	Polyline line = null;
 
-	movements.
-	.SkipUntil(
+	movements.SkipUntil(
 			mouseDowns.Do(_ =>
 								{
 									line = new Polyline() { Stroke = Brushes.Black, StrokeThickness = 3 };
